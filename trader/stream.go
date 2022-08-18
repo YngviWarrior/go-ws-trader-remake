@@ -187,8 +187,14 @@ func hasUpdate(user *Client, gamesInfo *[]entities.Memcached, gameBetList []*ent
 			idStatus, _ := strconv.ParseInt(cacheGame.GameIdStatus, 0, 64)
 			for _, id := range gamesIds {
 				if id == fmt.Sprintf("%v", ClientHub[user.Id].SubscribedGames[i].GameID) && ClientHub[user.Id].SubscribedGames[i].GameIDStatus != idStatus {
+					for _, v := range gameBetList {
+						if v.GameID == ClientHub[user.Id].SubscribedGames[i].GameID {
+							ClientHub[user.Id].SubscribedGames[i] = v
+						}
+					}
 
-					ClientHub[user.Id].SubscribedGames[i].GameIDStatus = idStatus
+					// ClientHub[user.Id].SubscribedGames[i].GameIDStatus = idStatus
+
 					sendNotification(ClientHub[user.Id].SubscribedGames[i], ClientHub[user.Id].SocketConn)
 				}
 			}
@@ -200,33 +206,41 @@ func SubscribeUpdate(c *websocket.Conn, cache *memcache.Client, dbConn *mysql.Sq
 	for range time.Tick(time.Second * 1) {
 		resp, _ := cache.Get("GamesUpdate")
 
-		if string(resp.Value) == "" {
-			fmt.Println("no games")
-		} else {
-			if resp.Key == "GamesUpdate" && len(string(resp.Value)) > 0 {
-				var gamesInfo []entities.Memcached
-				err := json.Unmarshal(resp.Value, &gamesInfo)
+		if resp.Key == "GamesUpdate" && len(string(resp.Value)) > 0 {
+			var gamesInfo []entities.Memcached
+			err := json.Unmarshal(resp.Value, &gamesInfo)
 
-				if err != nil {
-					fmt.Println("Marshal Json: " + err.Error())
-				}
-
-				for _, user := range ClientHub {
-					go func(user *Client) {
-						if user.IsAuthenticated {
-							var list []int64
-
-							for _, v := range user.SubscribedGames {
-								list = append(list, v.GameID)
-							}
-
-							gameBetList, _ := dbConn.GetInfoGameListWithBet(list, user.Id)
-							hasUpdate(user, &gamesInfo, gameBetList, dbConn)
-						}
-					}(user)
-				}
+			if err != nil {
+				fmt.Println("Marshal Json: " + err.Error())
 			}
+
+			for _, user := range ClientHub {
+				go func(user *Client) {
+					if user.IsAuthenticated {
+						var list []int64
+
+						for _, v := range user.SubscribedGames {
+							list = append(list, v.GameID)
+						}
+
+						gameBetList, _ := dbConn.GetInfoGameListWithBet(list, user.Id)
+
+						hasUpdate(user, &gamesInfo, gameBetList, dbConn)
+					}
+				}(user)
+			}
+
+			i := memcache.Item{}
+			i.Key = "GamesUpdate"
+			i.Value = []byte{}
+			err = cache.Set(&i)
+
+			if err != nil {
+				fmt.Println(err)
+			}
+
 		}
+
 	}
 }
 

@@ -112,7 +112,7 @@ func (c *SqlConn) GetInfoGameListWithBet(gameIDs []int64, userID int64) (rows []
 		ON bb.id_game = bg.id 
 		AND bb.id_usuario = ?
 		WHERE bg.id IN (?)
-	`, entities.GameStatusDone, 20, userID, in)
+	`, entities.GameStatusDone, 3, userID, in)
 
 	if err != nil {
 		return
