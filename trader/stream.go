@@ -209,6 +209,7 @@ func SubscribeUpdate(c *websocket.Conn, cache *memcache.Client, dbConn *mysql.Sq
 
 		if err != nil {
 			fmt.Println(err)
+			return
 		}
 
 		if resp != nil && resp.Key == "GamesUpdate" && len(string(resp.Value)) > 0 {
