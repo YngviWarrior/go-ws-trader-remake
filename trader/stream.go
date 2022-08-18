@@ -205,9 +205,13 @@ func hasUpdate(user *Client, gamesInfo *[]entities.Memcached, gameBetList []*ent
 
 func SubscribeUpdate(c *websocket.Conn, cache *memcache.Client, dbConn *mysql.SqlConn) {
 	for range time.Tick(time.Second * 1) {
-		resp, _ := cache.Get("GamesUpdate")
+		resp, err := cache.Get("GamesUpdate")
 
-		if resp.Key == "GamesUpdate" && len(string(resp.Value)) > 0 {
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		if resp != nil && resp.Key == "GamesUpdate" && len(string(resp.Value)) > 0 {
 			var gamesInfo []entities.Memcached
 			err := json.Unmarshal(resp.Value, &gamesInfo)
 
