@@ -216,6 +216,10 @@ func SubscribeUpdate(c *websocket.Conn, cache *memcache.Client, dbConn *mysql.Sq
 
 			for _, user := range ClientHub {
 				go func(user *Client) {
+					if err := c.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
+						return
+					}
+
 					if user.IsAuthenticated {
 						var list []int64
 
