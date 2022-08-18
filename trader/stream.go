@@ -7,6 +7,7 @@ import (
 	entities "gowstrader/entities"
 	mysql "gowstrader/mysql"
 	"log"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -216,10 +217,6 @@ func SubscribeUpdate(c *websocket.Conn, cache *memcache.Client, dbConn *mysql.Sq
 
 			for _, user := range ClientHub {
 				go func(user *Client) {
-					if err := c.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
-						return
-					}
-
 					if user.IsAuthenticated {
 						var list []int64
 
@@ -250,6 +247,8 @@ func SubscribeUpdate(c *websocket.Conn, cache *memcache.Client, dbConn *mysql.Sq
 
 func Subscribe(c *websocket.Conn, cache *memcache.Client, client *Client, dbConn *mysql.SqlConn) {
 	for {
+		// IsConnected()
+
 		_, message, err := c.ReadMessage()
 
 		if err != nil {
@@ -288,6 +287,24 @@ func Subscribe(c *websocket.Conn, cache *memcache.Client, client *Client, dbConn
 			}
 
 			_ = c.WriteMessage(websocket.TextMessage, bytes)
+		}
+	}
+}
+
+func IsConnected() {
+	for _, v := range ClientHub {
+		for {
+			v.SocketConn.SetCloseHandler(func(code int, text string) error {
+				fmt.Fprintf(os.Stderr, "websocket connection closed(%d, %s)\n", code, text)
+
+				// from default CloseHandler
+				message := websocket.FormatCloseMessage(code, "")
+				_ = v.SocketConn.WriteControl(websocket.CloseMessage, message, time.Now().Add(time.Second))
+
+				v.IsAuthenticated = false
+
+				return nil
+			})
 		}
 	}
 }
