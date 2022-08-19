@@ -31,7 +31,6 @@ func upgradeServer(cache *memcache.Client) http.HandlerFunc {
 		var dbConn = mysql.SqlConn{}
 		dbConn.CreateConnection()
 
-		// go trader.IsConnected(c)
 		go trader.SubscribeUpdate(c, cache, &dbConn)
 		go trader.Subscribe(c, cache, &client, &dbConn)
 	}

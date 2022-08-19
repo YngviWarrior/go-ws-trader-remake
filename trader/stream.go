@@ -193,8 +193,6 @@ func hasUpdate(user *Client, gamesInfo *[]entities.Memcached, gameBetList []*ent
 						}
 					}
 
-					// ClientHub[user.Id].SubscribedGames[i].GameIDStatus = idStatus
-
 					sendNotification(ClientHub[user.Id].SubscribedGames[i], ClientHub[user.Id].SocketConn)
 				}
 			}
@@ -293,41 +291,4 @@ func Subscribe(c *websocket.Conn, cache *memcache.Client, client *Client, dbConn
 			_ = c.WriteMessage(websocket.TextMessage, bytes)
 		}
 	}
-}
-
-func TryCloseNormally(wsConn *websocket.Conn) error {
-	defer wsConn.Close()
-	closeNormalClosure := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")
-	if err := wsConn.WriteControl(websocket.CloseMessage, closeNormalClosure, time.Now().Add(time.Second)); err != nil {
-		return err
-	}
-	if err := wsConn.SetReadDeadline(time.Now().Add(time.Second)); err != nil {
-		return err
-	}
-	for {
-		_, _, err := wsConn.ReadMessage()
-		if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-	}
-}
-
-func IsConnected() bool {
-	for _, v := range ClientHub {
-		fmt.Println(v)
-		err := v.SocketConn.SetReadDeadline(time.Now().Add(time.Second * 30))
-		// err := v.SocketConn.Close()
-
-		if err != nil {
-			fmt.Println(err)
-			return true
-		}
-
-		return false
-	}
-
-	return false
 }
