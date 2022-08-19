@@ -7,7 +7,6 @@ import (
 	entities "gowstrader/entities"
 	mysql "gowstrader/mysql"
 	"log"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -252,12 +251,12 @@ func SubscribeUpdate(c *websocket.Conn, cache *memcache.Client, dbConn *mysql.Sq
 
 func Subscribe(c *websocket.Conn, cache *memcache.Client, client *Client, dbConn *mysql.SqlConn) {
 	for {
-		// IsConnected()
-
 		_, message, err := c.ReadMessage()
 
 		if err != nil {
-			fmt.Println(err)
+			ClientHub[client.Id].IsAuthenticated = false
+			c.Close()
+			break
 		}
 
 		var msg entities.Read
@@ -296,20 +295,39 @@ func Subscribe(c *websocket.Conn, cache *memcache.Client, client *Client, dbConn
 	}
 }
 
-func IsConnected() {
-	for _, v := range ClientHub {
-		for {
-			v.SocketConn.SetCloseHandler(func(code int, text string) error {
-				fmt.Fprintf(os.Stderr, "websocket connection closed(%d, %s)\n", code, text)
-
-				// from default CloseHandler
-				message := websocket.FormatCloseMessage(code, "")
-				_ = v.SocketConn.WriteControl(websocket.CloseMessage, message, time.Now().Add(time.Second))
-
-				v.IsAuthenticated = false
-
-				return nil
-			})
+func TryCloseNormally(wsConn *websocket.Conn) error {
+	defer wsConn.Close()
+	closeNormalClosure := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")
+	if err := wsConn.WriteControl(websocket.CloseMessage, closeNormalClosure, time.Now().Add(time.Second)); err != nil {
+		return err
+	}
+	if err := wsConn.SetReadDeadline(time.Now().Add(time.Second)); err != nil {
+		return err
+	}
+	for {
+		_, _, err := wsConn.ReadMessage()
+		if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+			return nil
+		}
+		if err != nil {
+			return err
 		}
 	}
+}
+
+func IsConnected() bool {
+	for _, v := range ClientHub {
+		fmt.Println(v)
+		err := v.SocketConn.SetReadDeadline(time.Now().Add(time.Second * 30))
+		// err := v.SocketConn.Close()
+
+		if err != nil {
+			fmt.Println(err)
+			return true
+		}
+
+		return false
+	}
+
+	return false
 }
