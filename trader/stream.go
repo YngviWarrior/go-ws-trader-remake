@@ -184,10 +184,10 @@ func hasUpdate(user *Client, gamesInfo *[]entities.Memcached, gameBetList []*ent
 		for _, cacheGame := range *gamesInfo {
 			gamesIds := strings.Split(cacheGame.IdGames, ",")
 
-			idStatus, _ := strconv.ParseInt(cacheGame.GameIdStatus, 0, 64)
 			for _, id := range gamesIds {
-				if id == fmt.Sprintf("%v", ClientHub[user.Id].SubscribedGames[i].GameID) && ClientHub[user.Id].SubscribedGames[i].GameIDStatus != idStatus {
+				if id == fmt.Sprintf("%v", ClientHub[user.Id].SubscribedGames[i].GameID) && ClientHub[user.Id].SubscribedGames[i].GameIDStatus != cacheGame.GameIdStatus {
 					for _, v := range gameBetList {
+						v.GameIDStatus = cacheGame.GameIdStatus
 						if v.GameID == ClientHub[user.Id].SubscribedGames[i].GameID {
 							ClientHub[user.Id].SubscribedGames[i] = v
 						}
@@ -201,7 +201,7 @@ func hasUpdate(user *Client, gamesInfo *[]entities.Memcached, gameBetList []*ent
 }
 
 func SubscribeUpdate(c *websocket.Conn, cache *memcache.Client, dbConn *mysql.SqlConn) {
-	for range time.Tick(time.Second * 1) {
+	for range time.Tick(time.Millisecond) {
 		resp, err := cache.Get("GamesUpdate")
 
 		if err != nil {
@@ -227,7 +227,6 @@ func SubscribeUpdate(c *websocket.Conn, cache *memcache.Client, dbConn *mysql.Sq
 						}
 
 						gameBetList, _ := dbConn.GetInfoGameListWithBet(list, user.Id)
-
 						hasUpdate(user, &gamesInfo, gameBetList, dbConn)
 					}
 				}(user)
@@ -252,7 +251,10 @@ func Subscribe(c *websocket.Conn, cache *memcache.Client, client *Client, dbConn
 		_, message, err := c.ReadMessage()
 
 		if err != nil {
-			ClientHub[client.Id].IsAuthenticated = false
+			if ClientHub[client.Id] != nil {
+				ClientHub[client.Id] = &Client{}
+			}
+
 			c.Close()
 			break
 		}

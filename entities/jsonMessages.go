@@ -20,8 +20,8 @@ type Write struct {
 }
 
 type Memcached struct {
-	GameIdTypeTime string `json:"game_id_type_time"`
-	IdSymbolPair   string `json:"idSymbolPair"`
+	GameIdTypeTime int64  `json:"game_id_type_time"`
+	IdSymbolPair   int64  `json:"idSymbolPair"`
 	IdGames        string `json:"id_games"`
-	GameIdStatus   string `json:"game_status"`
+	GameIdStatus   int64  `json:"game_status"`
 }
